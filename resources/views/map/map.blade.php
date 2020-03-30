@@ -14,22 +14,29 @@ function generateSanitizedPlaceData($place)
     main { height: calc(100% - 145px); }
     #map-wrapper {position: relative; min-height: 500px; height: 100%; width: 100%; }
 	#map { position: absolute; top: 0; bottom: 0; width: 100%; }
-    .mapboxgl-popup {max-width:300px!important;}
+    .mapboxgl-popup {max-width:300px!important; min-width:220px;}
     @media only screen and (max-width: 600px){
         .mapboxgl-popup {max-width:240px!important;}
     }
     .mapboxgl-popup-close-button {font-size:17px; height:40px;}
     .mapboxgl-popup-content {padding:0!important; overflow:hidden; border-radius:5px;}
-    .mapboxgl-popup-content header {background-color:#a6d4ad; padding:10px 24px; font-weight:600; text-align:center; width:100%; text-shadow: 0px 1px 1px rgba(255,255,255,0.5); font-size:16px;}
+    .mapboxgl-popup-content header {background-color:#f9f9f9; padding:10px 24px 10px 10px; font-weight:600; text-align:left; width:100%; text-shadow: 0px 1px 1px rgba(255,255,255,0.5); font-size:16px;     border-bottom: 1px solid #ddd;
+}
     .mapboxgl-popup-content .address-content {padding:10px; margin:0;}
     .mapboxgl-popup-content .address-content div {padding:0; margin-bottom:15px; color:#111; font-size:13px; }
     .mapboxgl-popup-content .address-content div:last-of-type {margin-bottom:0px;}
         .mapboxgl-popup-content .address-content i {color:#8c9196; font-size:16px; margin-right:5px;display:inline-block;}
         .mapboxgl-popup-content .address-content span {}
     .mapboxgl-popup-content .popup-footer {width:100%; border-top:1px solid #ddd; text-align:center; font-size:16px; color:#111; padding:0px;}
-    .mapboxgl-popup-content .popup-footer a {display:block; width:100%; height:100%; padding:10px;  color:#111; transition:all 250ms ease-out; text-decoration: none; background-color:rgba(0,0,0,0.08);}
-    .mapboxgl-popup-content .popup-footer a i {margin-right:5px; font-size:16px; color:#8c9196;}
-    .mapboxgl-popup-content .popup-footer a:hover {background-color:rgba(0,0,0,0.16);}
+    .mapboxgl-popup-content .popup-footer a {display:block; width:100%; height:100%; padding:10px;  color:#111; transition:all 250ms ease-out; text-decoration: none; background-color:#82b98a; border-right:1px solid rgba(0,0,0,0.1);}
+    .mapboxgl-popup-content .popup-footer a:last-of-type {border-right:none;}
+    .mapboxgl-popup-content .popup-footer a i {margin-right:5px; font-size:16px; color:#fff;}
+    .mapboxgl-popup-content .popup-footer a:hover {background-color:#5c9865;}
+    .mapboxgl-popup-content .badge-container {padding:2px 0px 2px 5px;}
+        .mapboxgl-popup-content .badge-container .badge {font-size:11px; display:inline-block; margin:0px 5px 5px 0px;}
+
+    .mapboxgl-popup-anchor-bottom .mapboxgl-popup-tip {border-top-color: #82b889;}
+    .mapboxgl-popup-anchor-top .mapboxgl-popup-tip {border-bottom-color: #f9f9f9;}
 
 </style>
 @endsection
@@ -41,31 +48,24 @@ function generateSanitizedPlaceData($place)
         {
             var innerHTML = '';
             innerHTML += '<header>'+place.name+'</header>';
-            innerHTML += '<div class="address-content">';
+
             if(place.address)
             {
+                innerHTML += '<div class="address-content">';
                 innerHTML += '<div class="d-flex align-content-center"><i class="fas fa-map-marker-alt"></i> <span class="flex-grow-1">'+place.address+', ' + place.city + '</span></div>';
-            }
-            if(place.phoneNumber)
-            {
-                innerHTML += '<div class="d-flex align-content-center"><i class="fas fa-phone"></i> <span class="flex-grow-1">'+place.phoneNumber+'</span></div>';
-            }
-            innerHTML += '</div>';
-            if(place.url)
-            {
-            innerHTML += '<div class="popup-footer">';
-            innerHTML += '<a href="'+place.url+'" target="_blank"><i class="fas fa-link"></i>Site web</a>';
-            innerHTML += '</div>';
+                innerHTML += '</div>';
             }
 
-            
+            innerHTML += '<div class="badge-container">';
+                
             if(place.categories && place.categories.length > 0)
             {
                 for(var i = 0; i < place.categories.length; i++)
                 {
                     var category = place.categories[i];
-                    
+                    innerHTML += '<div class="badge badge-primary">'+category.name+'</div>';
                 }
+                
             }
 
             if(place.delivery && place.delivery.length > 0)
@@ -73,9 +73,23 @@ function generateSanitizedPlaceData($place)
                 for(var j = 0; j < place.delivery.length; j++)
                 {
                     var delivery = place.delivery[j];
-                    
+                    innerHTML += '<div class="badge badge-secondary">'+delivery.name+'</div>';
                 }
             }
+            innerHTML += '</div>';
+
+            innerHTML += '<div class="popup-footer d-flex align-content-center">';
+                if(place.url){
+                    innerHTML += '<a href="'+place.url+'" target="_blank" class="flex-grow-1" title="Site web"><i class="fas fa-link"></i></a>';
+                }
+                if(place.phoneNumber)
+                {
+                    innerHTML += '<a href="tel:'+place.phoneNumber+'"  class="flex-grow-1" title="Téléphone"><i class="fas fa-phone"></i></a>';
+                }
+                innerHTML += '<a href="/entreprise/'+place.slug+'"  class="flex-grow-1" title="Fiche de l\'entreprise"><i class="fas fa-address-card"></i></a>';
+            innerHTML += '</div>';
+
+            
 
             return innerHTML;
         }
