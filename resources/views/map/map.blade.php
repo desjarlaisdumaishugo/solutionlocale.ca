@@ -3,15 +3,6 @@
 @php
 function generateSanitizedPlaceData($place)
 {
-    if($place->hide_address)
-    {
-        unset($place->address);
-    }
-    
-    $place->delivery = $place->delivery->toArray();
-
-    $place->categories = $place->categories->toArray();
-
     return json_encode($place);
 }
 @endphp
@@ -48,9 +39,6 @@ function generateSanitizedPlaceData($place)
 
         function generatePlaceHTML(place)
         {
-            var place = JSON.parse(place);
-            
-
             var innerHTML = '';
             innerHTML += '<header>'+place.name+'</header>';
             innerHTML += '<div class="address-content">';
@@ -70,7 +58,8 @@ function generateSanitizedPlaceData($place)
             innerHTML += '</div>';
             }
 
-            if(place.categories.length > 0)
+            
+            if(place.categories && place.categories.length > 0)
             {
                 for(var i = 0; i < place.categories.length; i++)
                 {
@@ -79,7 +68,7 @@ function generateSanitizedPlaceData($place)
                 }
             }
 
-            if(place.delivery.length > 0)
+            if(place.delivery && place.delivery.length > 0)
             {
                 for(var j = 0; j < place.delivery.length; j++)
                 {
@@ -111,6 +100,9 @@ function generateSanitizedPlaceData($place)
 
                         map.addSource('places', {
                             'type': 'geojson',
+                            'cluster': true,
+                            'clusterMaxZoom': 12, // Max zoom to cluster points on
+                            'clusterRadius': 50, // Radius of each cluster when clustering points (defaults to 50)
                             'data': {
                                 'type': 'FeatureCollection',
                                 'features': [
@@ -130,11 +122,56 @@ function generateSanitizedPlaceData($place)
                             }
                         });
 
+                        map.addLayer({
+                            id: 'clusters',
+                            type: 'circle',
+                            source: 'places',
+                            filter: ['has', 'point_count'],
+                            paint: {
+                                // Use step expressions (https://docs.mapbox.com/mapbox-gl-js/style-spec/#expressions-step)
+                                // with three steps to implement three types of circles:
+                                //   * Blue, 20px circles when point count is less than 100
+                                //   * Yellow, 30px circles when point count is between 100 and 750
+                                //   * Pink, 40px circles when point count is greater than or equal to 750
+                                'circle-color': [
+                                    'step',
+                                    ['get', 'point_count'],
+                                    '#838383',
+                                    100,
+                                    '#838383',
+                                    750,
+                                    '#838383'
+                                ],
+                                'circle-radius': [
+                                    'step',
+                                    ['get', 'point_count'],
+                                    20,
+                                    100,
+                                    30,
+                                    750,
+                                    40
+                                ]
+                            }
+                        });
+
+                        map.addLayer({
+                            id: 'cluster-count',
+                            type: 'symbol',
+                            source: 'places',
+                            filter: ['has', 'point_count'],
+                            layout: {
+                                'text-field': '{point_count_abbreviated}',
+                                'text-font': ['DIN Offc Pro Medium', 'Arial Unicode MS Bold'],
+                                'text-size': 12
+                            }
+                        });
+
                         // Add a layer showing the places.
                         map.addLayer({
                             'id': 'places',
                             'type': 'symbol',
                             'source': 'places',
+                            'filter': ['!', ['has', 'point_count']],
                             'layout': {
                                 'icon-image': 'pin-gris',
                                 'icon-size': 0.4,
@@ -152,6 +189,24 @@ function generateSanitizedPlaceData($place)
                             })
                         );
 
+                        map.on('click', 'clusters', function (e) {
+                            var features = map.queryRenderedFeatures(e.point, {
+                                layers: ['clusters']
+                            });
+                            var clusterId = features[0].properties.cluster_id;
+                            map.getSource('places').getClusterExpansionZoom(
+                                clusterId,
+                                function (err, zoom) {
+                                    if (err) return;
+
+                                    map.easeTo({
+                                        center: features[0].geometry.coordinates,
+                                        zoom: zoom
+                                    });
+                                }
+                            );
+                        });
+
                         // When a click event occurs on a feature in the places layer, open a popup at the
                         // location of the feature, with description HTML from its properties.
                         map.on('click', 'places', function (e) {
@@ -165,10 +220,26 @@ function generateSanitizedPlaceData($place)
                                 coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
                             }
 
-                            new mapboxgl.Popup()
+                            var placeJson = JSON.parse(description);
+
+                            var popup = new mapboxgl.Popup()
                                 .setLngLat(coordinates)
-                                .setHTML(generatePlaceHTML(description))
+                                .setHTML("loading...")
                                 .addTo(map);
+
+                                $.getJSON("/entreprise/json/"+placeJson.slug, function(emp) { 
+                                    popup.setHTML(generatePlaceHTML(emp));
+                                }); 
+                        });
+
+                        // Change the cursor to a pointer when the mouse is over the places layer.
+                        map.on('mouseenter', 'clusters', function () {
+                            map.getCanvas().style.cursor = 'pointer';
+                        });
+
+                        // Change it back to a pointer when it leaves.
+                        map.on('mouseleave', 'clusters', function () {
+                            map.getCanvas().style.cursor = '';
                         });
 
                         // Change the cursor to a pointer when the mouse is over the places layer.
