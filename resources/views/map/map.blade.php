@@ -7,6 +7,10 @@ function generateSanitizedPlaceData($place)
     {
         unset($place->address);
     }
+    
+    $place->delivery = $place->delivery->toArray();
+
+    $place->categories = $place->categories->toArray();
 
     return json_encode($place);
 }
@@ -66,7 +70,23 @@ function generateSanitizedPlaceData($place)
             innerHTML += '</div>';
             }
 
-            //TODO : Vincent add more stuff...
+            if(place.categories.length > 0)
+            {
+                for(var i = 0; i < place.categories.length; i++)
+                {
+                    var category = place.categories[i];
+                    
+                }
+            }
+
+            if(place.delivery.length > 0)
+            {
+                for(var j = 0; j < place.delivery.length; j++)
+                {
+                    var delivery = place.delivery[j];
+                    
+                }
+            }
 
             return innerHTML;
         }
